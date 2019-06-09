@@ -35,9 +35,10 @@ These modules update your DNS records with the new IP addresses.
 * cloudflare: Update your DNS records via Cloudflare's API. Requires configuration in the module's cloudflare.ini file.
 
 ## Installation
-DDNS-NG requires Python. The only nonstandard Python module it depends on is:
-ipy - https://github.com/autocracy/python-ipy/
+DDNS-NG requires Python. The only nonstandard Python module it depends on is "ipy" (https://github.com/autocracy/python-ipy/)
 
 Clone or download the git repository onto your server, choose your modules in the config.ini file and configure any modules, if required.
-To run the script every five minutes, you could add the following line to your cron jobs (run "crontab -e"):
-/5 * * * * /opt/ddns-ng/ddns-ng.py >> /opt/ddns-ng/log.txt 2>&1
+
+To run the script every five minutes, you could add the following line to your cron jobs (run `crontab -e`):
+
+`*/5 * * * * /opt/ddns-ng/ddns-ng.py >> /opt/ddns-ng/log.txt 2>&1`
