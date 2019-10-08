@@ -2,17 +2,17 @@
 
 # DDNS-NG, a modular Dynamic DNS updater
 # Copyright (C) 2019 Heiko Rothkranz
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -21,7 +21,8 @@
 
 import os
 import sys
-import ConfigParser
+#import ConfigParser as configparser
+import configparser
 import importlib
 from IPy import IP
 
@@ -35,14 +36,16 @@ else:
 	# No command line argument -> use default config file path
 	config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.ini")
 
+#config_file = "./config.ini"
+
 # Check if the config file exists
 if not os.path.isfile(config_file):
 	sys.exit("Could not find the configuration file. Provide a path to the config file as a command line argument or call the script without any arguments.")
 
 # Read config file
-config = ConfigParser.RawConfigParser()
+config = configparser.RawConfigParser()
 try:
-	config.readfp(open(config_file)) # TODO: throw exception if invalid config file?
+	config.read_file(open(config_file)) # TODO: throw exception if invalid config file?
 except:
 	sys.exit("Configuration file exists but could not be read.")
 
@@ -81,6 +84,17 @@ if cont == False:
 
 new_ipv4 = None
 new_ipv6 = None
+
+
+new_ip = IP(ipretrievers[1].getIP())
+new_ip.version()
+new_ip.strNormal()
+new_ip = IP(ipretrievers[0].getIP())
+new_ip.version()
+new_ip.strNormal()
+
+
+
 for ipretriever in ipretrievers:
 	new_ip = IP(ipretriever.getIP())
 	if new_ip.version() == 4:
@@ -131,4 +145,3 @@ for dns in dnss:
 
 for oldip in oldips:
 	oldip.save(new_ipv4, new_ipv6)
-

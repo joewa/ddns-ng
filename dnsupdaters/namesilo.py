@@ -1,16 +1,16 @@
 # DDNS-NG, a modular Dynamic DNS updater
 # Copyright (C) 2019 Heiko Rothkranz
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
@@ -18,7 +18,7 @@
 
 import os
 import sys
-import ConfigParser
+import configparser
 import requests
 import xml.etree.ElementTree as ET
 
@@ -36,8 +36,9 @@ if not os.path.isfile(config_file):
 	sys.exit("Could not find the configuration file for the namesilo module. Please check that the dnsupdaters/namesilo.ini file is readable.")
 
 # Read config file
-config = ConfigParser.RawConfigParser()
-config.readfp(open(config_file)) # TODO: throw exception if invalid config file?
+#config_file = "namesilo.ini"
+config = configparser.RawConfigParser()
+config.read_file(open(config_file)) # TODO: throw exception if invalid config file?
 
 def update(new_ipv4, new_ipv6):
 	# Create a list of record IDs we want to update
@@ -47,7 +48,7 @@ def update(new_ipv4, new_ipv6):
 			'version': NS_Version,
 			'type': "xml",
 			'key': config.get('DEFAULT', 'NS_Key'),
-			'name': domain
+			'domain': domain
 		}
 		r = requests.get('https://www.namesilo.com/api/dnsListRecords', params=request_params)
 		if not r.status_code == 200:
@@ -55,10 +56,10 @@ def update(new_ipv4, new_ipv6):
 		response = ET.fromstring(r.text)
 		if response.find("reply").find("code").text != "300":
 			sys.exit('Retrieving DNS records for \'' + domain + '\' failed. Response code: ' + response.find("reply").find("code").text)
-		
+
 		# Create list of subdomains for this domain from config option
 		subdomains = config.get(domain, 'NS_Subdomains').split(',')
-		
+
 		# Walk through all the records in the zone, check for those which match our list of subdomains and then update
 		for xmlrecord in response.find("reply").findall("resource_record"):
 			record = {}
@@ -66,7 +67,8 @@ def update(new_ipv4, new_ipv6):
 			record["type"] = xmlrecord.find("type").text
 			record["host"] = xmlrecord.find("host").text
 			record["value"] = xmlrecord.find("value").text
-			
+			print(record)
+
 			# Check if record is in out list of subdomains and then update
 			if (((not new_ipv4 == None and record['type'] == 'A') or (not new_ipv6 == None and record['type'] == 'AAAA')) and \
 					(record['host'] in subdomains or record['host'].rsplit('.' + domain, 1)[0] in subdomains)
@@ -78,23 +80,30 @@ def update(new_ipv4, new_ipv6):
 							print("Record '" + record['host'] + "' does not require updating.")
 					else:
 						# Update the record with the new IP address
+						if not config.getboolean('DEFAULT', 'quiet'):
+							print("Record '" + record['host'] + "' requires updating.")
+
 						if record['type'] == 'A':
 							new_ip = new_ipv4.strNormal()
 							new_ttl = int(config.get('DEFAULT', 'NS_TTL_A'))
 						else:
 							new_ip = new_ipv6.strNormal()
 							new_ttl = int(config.get('DEFAULT', 'NS_TTL_AAAA'))
-						
+
+						rrhost = record['host'].replace(".{0}".format(domain), "").replace(domain, "") # + "." + domain
+
 						request_params = {
 							'version': NS_Version,
 							'type': "xml",
 							'key': config.get('DEFAULT', 'NS_Key'),
 							'domain': domain,
 							'rrid': record['id'],
-							'rrhost': record['host'],
+							'rrhost': rrhost,
 							'rrvalue': new_ip,
 							'rrttl': new_ttl
 						}
+
+						print(request_params)
 						r = requests.get('https://www.namesilo.com/api/dnsUpdateRecord', params=request_params)
 						if not r.status_code == 200:
 							sys.exit("Unexpected status code while updating '" + record['host'] + "': " + str(r.status_code))
@@ -103,4 +112,5 @@ def update(new_ipv4, new_ipv6):
 							if not config.getboolean('DEFAULT', 'quiet'):
 								print('Updated \'' + record["host"] + '\' with \'' + new_ip + '\'')
 						else:
+							return r
 							sys.exit('Updating \'' + record['host'] + '\' with \'' + new_ip + '\' failed. Response code: ' + response.find("reply").find("code").text)
